@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QMA — Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .auth-box {
+            width: 100%;
+            max-width: 420px;
+            padding: 3rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            animation: slideUp .6s ease-out;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: .5rem;
+        }
+
+        .auth-header i {
+            font-size: 3rem;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .auth-header h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .auth-header p {
+            color: var(--text-muted);
+            font-size: .9rem;
+            margin-top: .5rem;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .auth-footer {
+            text-align: center;
+            font-size: .9rem;
+            color: var(--text-muted);
+            margin-top: .5rem;
+        }
+
+        .auth-link {
+            color: var(--accent-color);
+            font-weight: 600;
+            cursor: pointer;
+            transition: color .3s;
+            text-decoration: none;
+        }
+
+        .auth-link:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .auth-box {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Background Blobs -->
+    <div class="blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Theme Toggle -->
+    <button class="global-theme-toggle" id="themeToggle">
+        <i class="ph theme-icon"></i>
+    </button>
+
+    <!-- Login Card -->
+    <div class="auth-box glass">
+        <div class="auth-header">
+            <i class="ph-fill ph-intersect-three"></i>
+            <h2>Welcome Back</h2>
+            <p>Log in to access your dashboard</p>
+        </div>
+
+        <form class="auth-form" id="loginForm">
+            <div class="input-group">
+                <label for="loginUsername">Username</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-user"></i>
+                    <input type="text" id="loginUsername" placeholder="your_username" autocomplete="username" required>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="loginPassword">Password</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-lock-key"></i>
+                    <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password"
+                        required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" id="loginBtn">
+                <i class="ph ph-sign-in"></i> Sign In
+            </button>
+        </form>
+
+        <div class="divider">OR</div>
+
+        <button class="btn-google" id="googleLoginBtn">
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google">
+            Continue with Google
+        </button>
+
+        <div class="auth-footer">
+            Don't have an account?
+            <a class="auth-link" href="signup.html">Sign up</a>
+        </div>
+        <div class="divider" style="margin-top:0">OR</div>
+
+        <button class="btn-guest" id="guestBtn">
+            <i class="ph ph-user-circle-dashed"></i>
+            Continue as Guest
+        </button>
+
+        <p style="text-align:center;font-size:.78rem;color:var(--text-muted);margin-top:-.5rem;">
+            Guest mode: calculate only · no history saved
+        </p>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Redirect if already logged in
+            const { token } = getSession();
+            if (token) { window.location.href = 'dashboard.html'; return; }
+
+            // Check OAuth callback
+            const wasOAuth = await checkOAuthCallback();
+            if (wasOAuth) return;
+
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+            // Login form
+            document.getElementById('loginForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('loginUsername').value.trim();
+                const password = document.getElementById('loginPassword').value;
+                if (!username || !password) { toast('Please enter your username and password.', 'error'); return; }
+
+                setBtn('loginBtn', true);
+                try {
+                    const data = await api('/auth-service/auth/login', 'POST', { username, password }, false);
+                    saveSession(data.token, username, '');
+                    toast(`Welcome back, ${username}! 👋`, 'success', 1200);
+                    setTimeout(() => { window.location.href = 'dashboard.html'; }, 1000);
+                } catch (err) {
+                    toast(err.message || 'Invalid credentials.', 'error');
+                } finally {
+                    setBtn('loginBtn', false, '<i class="ph ph-sign-in"></i> Sign In');
+                }
+            });
+
+            // Google login
+            document.getElementById('googleLoginBtn').addEventListener('click', triggerGoogleLogin);
+
+            // Guest login
+            document.getElementById('guestBtn').addEventListener('click', () => {
+                sessionStorage.setItem('qma-guest', 'true');
+                sessionStorage.removeItem('qma-token');
+                window.location.href = 'dashboard.html';
+            });
+        });
+    </script>
+</body>
+
+</html>

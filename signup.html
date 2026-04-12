@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QMA — Create Account</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+
+        .auth-box {
+            width: 100%;
+            max-width: 420px;
+            padding: 3rem 2.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            animation: slideUp .6s ease-out;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: .5rem;
+        }
+
+        .auth-header i {
+            font-size: 3rem;
+            color: var(--accent-color);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .auth-header h2 { font-size: 1.8rem; font-weight: 700; }
+
+        .auth-header p {
+            color: var(--text-muted);
+            font-size: .9rem;
+            margin-top: .5rem;
+        }
+
+        .auth-form {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .auth-footer {
+            text-align: center;
+            font-size: .9rem;
+            color: var(--text-muted);
+            margin-top: .5rem;
+        }
+
+        .auth-link {
+            color: var(--accent-color);
+            font-weight: 600;
+            cursor: pointer;
+            transition: color .3s;
+            text-decoration: none;
+        }
+
+        .auth-link:hover { color: var(--accent-hover); text-decoration: underline; }
+
+        @media (max-width: 600px) {
+            .auth-box { padding: 2rem 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background Blobs -->
+    <div class="blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Theme Toggle -->
+    <button class="global-theme-toggle" id="themeToggle">
+        <i class="ph theme-icon"></i>
+    </button>
+
+    <!-- Signup Card -->
+    <div class="auth-box glass">
+        <div class="auth-header">
+            <i class="ph-fill ph-intersect-three"></i>
+            <h2>Create Account</h2>
+            <p>Join QMA for advanced conversions</p>
+        </div>
+
+        <form class="auth-form" id="signupForm">
+            <div class="input-group">
+                <label for="signupUsername">Username</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-user"></i>
+                    <input
+                        type="text"
+                        id="signupUsername"
+                        placeholder="choose_a_username"
+                        autocomplete="username"
+                        required
+                    >
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="signupPassword">Password</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-lock-key"></i>
+                    <input
+                        type="password"
+                        id="signupPassword"
+                        placeholder="••••••••"
+                        autocomplete="new-password"
+                        required
+                    >
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary" id="signupBtn">
+                <i class="ph ph-user-plus"></i> Sign Up
+            </button>
+        </form>
+
+        <div class="divider">OR</div>
+
+        <button class="btn-google" id="googleSignupBtn">
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google">
+            Sign up with Google
+        </button>
+
+        <div class="auth-footer">
+            Already have an account?
+            <a class="auth-link" href="index.html">Log in</a>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Redirect if already logged in
+            const { token } = getSession();
+            if (token) { window.location.href = 'dashboard.html'; return; }
+
+            // Check OAuth callback
+            const wasOAuth = await checkOAuthCallback();
+            if (wasOAuth) return;
+
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+            // Signup form
+            document.getElementById('signupForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('signupUsername').value.trim();
+                const password = document.getElementById('signupPassword').value;
+                if (!username || !password) { toast('Please fill in all fields.', 'error'); return; }
+
+                setBtn('signupBtn', true);
+                try {
+                    const data = await api('/auth-service/auth/register', 'POST', { username, password }, false);
+                    if (typeof data === 'string' && data.toLowerCase().includes('already')) {
+                        toast(data, 'warn');
+                    } else {
+                        toast('Account created! Redirecting to login…', 'success', 1500);
+                        setTimeout(() => {
+                            window.location.href = `index.html?username=${encodeURIComponent(username)}`;
+                        }, 1200);
+                    }
+                } catch (err) {
+                    toast(err.message, 'error');
+                } finally {
+                    setBtn('signupBtn', false, '<i class="ph ph-user-plus"></i> Sign Up');
+                }
+            });
+
+            // Google signup
+            document.getElementById('googleSignupBtn').addEventListener('click', triggerGoogleLogin);
+
+            // Pre-fill username if redirected from signup (not relevant here, but harmless)
+            const p = new URLSearchParams(window.location.search);
+            const preUser = p.get('username');
+            if (preUser) document.getElementById('signupUsername').value = preUser;
+        });
+    </script>
+</body>
+</html>
