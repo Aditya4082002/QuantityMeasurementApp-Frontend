@@ -242,29 +242,6 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8765';
 npm run build
 ```
 
-The build files will be in the `dist/` directory. Deploy these files to any static hosting service:
-- Vercel
-- Netlify
-- GitHub Pages
-- AWS S3
-- Any web server
-
-## 📄 License
-
-This project is part of the Quantity Measurement Application suite.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
-
-## 📞 Support
-
-For issues or questions, please check the backend API documentation or contact the development team.
-
 ---
 
 **Enjoy using QMA React! 🎉**
